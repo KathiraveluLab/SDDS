@@ -3,7 +3,10 @@ package org.sdds;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.opendaylight.messaging4transport.impl.AmqpPublisher;
-import javax.jms.JMSException;
+import org.opendaylight.messaging4transport.impl.AmqpConfig;
+import org.apache.qpid.amqp_1_0.jms.impl.ConnectionFactoryImpl;
+import javax.jms.*;
+import java.util.function.BiConsumer;
 
 /**
  * SDDS Control Channel manages the asynchronous communication between planes.
@@ -37,5 +40,45 @@ public class ControlChannel {
             LOG.error("Publishing interrupted for topic: " + topic, e);
             Thread.currentThread().interrupt();
         }
+    }
+
+    /**
+     * Starts an asynchronous listener for SDDS commands.
+     * @param topic The topic to listen on.
+     * @param commandHandler callback for (command, payload)
+     */
+    public void startCommandListener(String topic, BiConsumer<String, String> commandHandler) {
+        new Thread(() -> {
+            try {
+                String user = AmqpConfig.getUser();
+                String password = AmqpConfig.getPassword();
+                ConnectionFactoryImpl factory = new ConnectionFactoryImpl(AmqpConfig.getHost(), AmqpConfig.getPort(), user, password);
+
+                Connection connection = factory.createConnection(user, password);
+                connection.start();
+                Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+                MessageConsumer consumer = session.createConsumer(AmqpConfig.getDestination(topic));
+
+                LOG.info("Control Channel Listener active on topic: {}", topic);
+
+                while (true) {
+                    Message msg = consumer.receive();
+                    if (msg instanceof TextMessage) {
+                        String body = ((TextMessage) msg).getText();
+                        LOG.info("Received External Command: {}", body);
+                        
+                        // Parse command format: "COMMAND:PAYLOAD"
+                        String[] parts = body.split(":", 2);
+                        if (parts.length == 2) {
+                            commandHandler.accept(parts[0].trim(), parts[1].trim());
+                        } else {
+                            LOG.warn("Invalid command format received: {}", body);
+                        }
+                    }
+                }
+            } catch (JMSException e) {
+                LOG.error("Control Channel Listener failed", e);
+            }
+        }).start();
     }
 }

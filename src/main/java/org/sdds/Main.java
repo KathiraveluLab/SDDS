@@ -14,19 +14,36 @@ public class Main {
         LOG.info("Initializing SDDS Framework (Mayan-DS)...");
 
         try {
-            // STEP 1: Control Plane (Messaging4Transport)
+            // STEP 1: Components Initialization
             ControlChannel control = new ControlChannel();
-            control.publishControlFlow("sdds/system", "INITIALIZING");
-
-            // STEP 2: Orchestration Plane (Evora)
             Orchestrator orchestrator = new Orchestrator();
-            orchestrator.scheduleService("inter-domain-sync");
-
-            // STEP 3: Resilience Plane (SMART)
             ResilienceManager resilience = new ResilienceManager();
+
+            // STEP 2: Start Dynamic Command Listener
+            control.startCommandListener("sdds/commands", (command, payload) -> {
+                switch (command.toUpperCase()) {
+                    case "SCHEDULE":
+                        orchestrator.scheduleService(payload);
+                        break;
+                    case "POLICY":
+                        // Format: flowId,policy
+                        String[] policyParts = payload.split(",");
+                        if (policyParts.length == 2) {
+                            resilience.applyPolicy(policyParts[0], policyParts[1]);
+                        }
+                        break;
+                    default:
+                        LOG.warn("Unknown command: {}", command);
+                }
+            });
+
+            // STEP 3: Initial Demo Execution
+            control.publishControlFlow("sdds/system", "INITIALIZING");
+            orchestrator.scheduleService("inter-domain-sync");
             resilience.applyPolicy("flow-101", "REPLICATE");
 
             LOG.info("SDDS Framework (Mayan-DS) is now active and network-aware.");
+            LOG.info("Use sdds_client.sh in another terminal to trigger actions.");
 
         } catch (Exception e) {
             LOG.error("Failed to initialize SDDS Framework", e);

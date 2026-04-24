@@ -54,21 +54,36 @@ control.publishControlFlow("sdds/system", "STATE_UPDATE");
 ## 4. Monitoring the System
 Since the framework uses an external AMQP broker, you can monitor the internal state in real-time:
 
-![Broker Coordination Plane](img/broker.png)
+![Broker Coordination Plane](img/topics.png)
 
 1. **Web Console**: Visit `http://localhost:8161` (Default login: `admin`/`password`).
 2. **Topics**: Watch the following topics for events:
    - `sdds/system`: Initialization and heartbeat.
    - `smart/flow-updates`: Resilience policy enforcements.
 
+## 5. Parallel Interaction (sdds_client.sh)
+You can now interact with a running SDDS instance in real-time without restarting the launcher. After running `./sdds_launcher.sh` in one terminal, open another terminal and use the client script:
+
+### Schedule a new service
+```bash
+./sdds_client.sh SCHEDULE compression
+```
+
+### Apply a new resilience policy
+```bash
+./sdds_client.sh POLICY flow-102,CLONE
+```
+
+The running SDDS instance will receive these commands via AMQP and execute them immediately.
+
 ---
 
-## 5. Troubleshooting the "Hang"
+## 6. Troubleshooting the "Hang"
 The framework is designed as a long-running middleware. When you run it, the terminal may not return to the prompt because the Messaging4Transport library maintains active connections.
 - **To Stop**: Press `Ctrl+C` to terminate the process.
 - **To Exit Automatically**: You can add `System.exit(0);` at the end of `Main.java` if you only want to run it as a one-off demo.
 
 ---
 
-## 6. Extending SDDS
+## 7. Extending SDDS
 To build more complex workflows, you can modify `src/main/java/org/sdds/Main.java` to chain multiple service scheduling and policy enforcement calls together based on your research requirements.
