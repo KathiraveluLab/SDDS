@@ -27,11 +27,15 @@ public class ControlChannel {
             // Updated to use the correct class name for the 1.0.4-Beryllium-SR4 version
             AmqpPublisher.publish(topic, message);
             LOG.debug("Successfully published message to topic: {}", topic);
-        } catch (JMSException | InterruptedException e) {
-            LOG.error("Failed to publish control flow to topic: " + topic, e);
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
+        } catch (JMSException e) {
+            if (e.getCause() instanceof java.net.ConnectException || e.getMessage().contains("Connection refused")) {
+                LOG.warn("Could not connect to AMQP Broker on localhost:5672. Ensure the broker is running.");
+            } else {
+                LOG.error("Failed to publish control flow to topic: " + topic, e);
             }
+        } catch (InterruptedException e) {
+            LOG.error("Publishing interrupted for topic: " + topic, e);
+            Thread.currentThread().interrupt();
         }
     }
 }

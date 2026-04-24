@@ -20,13 +20,29 @@ mkdir -p ~/.m2/repository/org/opendaylight/controller/sal-dom-api/1.3.0-SNAPSHOT
 # echo "Building Messaging4Transport..."
 # mvn -U -s /tmp/settings.xml -f /home/pradeeban/messaging4transport/pom.xml clean install -DskipTests
 
-# echo "Building Évora..."
-# mvn -U -s /tmp/settings.xml -f /home/pradeeban/KathiraveluLab/Evora/pom.xml clean install -DskipTests
+# 3. Start AMQP Broker (ActiveMQ)
+echo "Ensuring AMQP Broker is active..."
+# Force remove any existing container to avoid conflicts
+docker rm -f sdds-broker 2>/dev/null || true
 
-# echo "Building SMART (API)..."
-# mvn -U -s /tmp/settings.xml -f /home/pradeeban/SMART/pom.xml clean install -DskipTests -pl api
+echo "Starting sdds-broker container..."
+docker run -d --name sdds-broker -p 5672:5672 -p 8161:8161 rmohr/activemq
 
-# 3. Build & Run SDDS Framework
+# Wait for broker readiness (Port 5672)
+echo "Waiting for broker on localhost:5672..."
+MAX_RETRIES=30
+COUNT=0
+while ! timeout 1 bash -c "cat < /dev/null > /dev/tcp/localhost/5672" 2>/dev/null; do
+    sleep 2
+    COUNT=$((COUNT+1))
+    if [ $COUNT -ge $MAX_RETRIES ]; then
+        echo "Error: AMQP Broker failed to start in time. Check 'docker logs sdds-broker'"
+        exit 1
+    fi
+done
+echo "Broker is ready!"
+
+# 4. Build & Run SDDS Framework
 echo "Building SDDS Framework Integration..."
 mvn -U clean compile
 
