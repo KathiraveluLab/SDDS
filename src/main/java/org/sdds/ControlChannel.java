@@ -32,7 +32,8 @@ public class ControlChannel {
             LOG.debug("Successfully published message to topic: {}", topic);
         } catch (JMSException e) {
             if (e.getCause() instanceof java.net.ConnectException || e.getMessage().contains("Connection refused")) {
-                LOG.warn("Could not connect to AMQP Broker on localhost:5672. Ensure the broker is running.");
+                int port = Integer.getInteger("amqp.port", 5672);
+                LOG.warn("Could not connect to AMQP Broker on localhost:{}. Ensure the broker is running.", port);
             } else {
                 LOG.error("Failed to publish control flow to topic: " + topic, e);
             }
@@ -52,14 +53,15 @@ public class ControlChannel {
             try {
                 String user = AmqpConfig.getUser();
                 String password = AmqpConfig.getPassword();
-                ConnectionFactoryImpl factory = new ConnectionFactoryImpl(AmqpConfig.getHost(), AmqpConfig.getPort(), user, password);
+                int port = Integer.getInteger("amqp.port", AmqpConfig.getPort());
+                ConnectionFactoryImpl factory = new ConnectionFactoryImpl(AmqpConfig.getHost(), port, user, password);
 
                 Connection connection = factory.createConnection(user, password);
                 connection.start();
                 Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
                 MessageConsumer consumer = session.createConsumer(AmqpConfig.getDestination(topic));
 
-                LOG.info("Control Channel Listener active on topic: {}", topic);
+                LOG.info("Control Channel Listener active on port {} for topic: {}", port, topic);
 
                 while (true) {
                     Message msg = consumer.receive();

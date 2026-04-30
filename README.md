@@ -21,7 +21,7 @@ Mayan-DS orchestrates data services by integrating core building blocks from the
 ### Prerequisites
 - **Java 8** (JDK 1.8 compatibility)
 - **Maven 3.8+**
-- (Optional) **ActiveMQ** broker listening on `localhost:5672` for AMQP communication.
+- **Docker** (Recommended, for automatic AMQP broker deployment)
 
 ### Build and Launch
 The framework is pre-configured with the necessary OpenDaylight Beryllium-SR4 shims. Use the master launcher for a one-click deployment:
@@ -30,6 +30,13 @@ The framework is pre-configured with the necessary OpenDaylight Beryllium-SR4 sh
 chmod +x sdds_launcher.sh
 ./sdds_launcher.sh
 ```
+
+> [!NOTE]
+> The launcher automatically detects if port `5672` is in use. If it is occupied by an **ActiveMQ** instance (either in a Docker container or running directly on the host), it reuses it. If port `5672` is used by any other program or a non-ActiveMQ container, the launcher spawns a new ActiveMQ instance on port `5673` and configures the framework accordingly.
+
+## 📖 Documentation
+
+For detailed usage instructions, CLI client examples, and monitoring tips, please refer to the **[User Guide](USER-GUIDE.md)**.
 
 ## 📂 Project Structure
 - `src/main/java/org/sdds/Main.java`: System entry point.
